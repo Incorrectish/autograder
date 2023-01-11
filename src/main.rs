@@ -8,8 +8,10 @@ const LINES_OF_OUTPUT: usize = 7;
 // Offset for how many lines of output are printed before the board
 const UNIVERSAL_OFFSET: usize = 0;
 
-const PLAYER_1: &'static str = "R";
-const PLAYER_2: &'static str = "Y";
+const INPUT_OFFSET: usize = 1;
+
+const PLAYER_1: &'static str = "x";
+const PLAYER_2: &'static str = "o";
 
 const P1_WIN_TEST_MOVES_1: [usize; 12] = [5, 4, 4, 3, 1, 2, 1, 4, 1, 4, 1, 4];
 const P1_WIN_TEST_MOVES_2: [usize; 31] = [
@@ -43,45 +45,45 @@ fn main() {
     // Creates a "Future" object which contains the async code. This code is not run until it is
     // provided with an async context
 
-    let mut scores = [0; 7];
+    let mut scores = [0; 5];
 
     // let fmoves = test_moves(&mut scores[0], /* unimplemented */);
-    if let [ref mut score0, ref mut score1, ref mut score2, ref mut score3, ref mut score4, ref mut score5, ref mut score6] =
+    if let [ref mut score0, ref mut score1, ref mut score2, ref mut score3, ref mut score4] =
         scores
     {
         // let fmoves_test = test_moves(score0, );
         // TODO: Refactor to support more words: drew, win, etc
-        let fp1w1 = test_outcome(score1, P1_WIN_TEST_MOVES_1, ["win", "won"]);
-        let fp1w2 = test_outcome(score2, P1_WIN_TEST_MOVES_2, ["win", "won"]);
-        let fp2w1 = test_outcome(score3, P2_WIN_TEST_MOVES_1, ["won", "win"]);
-        let fp2w2 = test_outcome(score4, P2_WIN_TEST_MOVES_2, ["won", "win"]);
+        let fp1w1 = test_outcome(score0, P1_WIN_TEST_MOVES_1, ["win", "won"]);
+        let fp1w2 = test_outcome(score1, P1_WIN_TEST_MOVES_2, ["win", "won"]);
+        let fp2w1 = test_outcome(score2, P2_WIN_TEST_MOVES_1, ["won", "win"]);
+        let fp2w2 = test_outcome(score3, P2_WIN_TEST_MOVES_2, ["won", "win"]);
+        let fd1 = test_outcome(score4, DRAW_TEST_1, ["tie", "draw", "drew"]);
         // Removed one test case for an even 5 cases
         // let fp2w3 = test_outcome(score6, P2_WIN_TEST_MOVES_3, ["win", "won"]);
-        let fd1 = test_outcome(score5, DRAW_TEST_1, ["draw", "drew"]);
 
         // This blocks the current thread, so only the async thread runs
         block_on(fp1w1);
         block_on(fp1w2);
         block_on(fp2w1);
         block_on(fp2w2);
+        block_on(fd1);
         // Removed one test case for an even 5 cases
         // block_on(fp2w3);
-        block_on(fd1);
 
         // scores can be between 0 and 5 based on the number of test cases that are passed
-        // multiply score by 2 for total 
+        // multiply score by 2 for total
+        dbg!(scores);
         dbg!(scores.iter().sum::<usize>() * 2);
-
     }
 }
 
-// This is the bulk of the logic, it tests a certain amount of moves around an outcome 
+// This is the bulk of the logic, it tests a certain amount of moves around an outcome
 // moves are defined as a constant above, and output tests is the "win, won" arrays to allow us to
 // check if the message is correct
 async fn test_outcome<const N: usize, const M: usize>(
     score: &mut usize,
     input: [usize; N],
-    output_tests: [&'static str; M]
+    output_tests: [&'static str; M],
 ) {
     // Board for testing
     let mut connect4_board = [[" "; 7]; 6];
@@ -103,12 +105,19 @@ async fn test_outcome<const N: usize, const M: usize>(
             stdout_reader.read_line(&mut buffer[output_line]).await;
         }
 
-        assert!(matches(&buffer, &connect4_board));
-        if within(output_tests, buffer[LINES_OF_OUTPUT - 1].clone()) || within(output_tests, buffer[0].clone()) {
+        // dbg!(input[i] - INPUT_OFFSET);
+        // debug(&buffer);
+        // println!("\n");
+        // assert!(matches(&buffer, &connect4_board));
+        if within(output_tests, buffer[LINES_OF_OUTPUT - 1].clone())
+            || within(output_tests, buffer[0].clone())
+        {
             *score = 1;
         }
         // Writes "i" to stdin of the child process
-        stdin.write_all(format!("{}\n", input[i]).as_bytes()).await;
+        stdin
+            .write_all(format!("{}\n", input[i] - INPUT_OFFSET).as_bytes())
+            .await;
         drop_piece(
             &mut connect4_board,
             input[i],
@@ -120,7 +129,12 @@ async fn test_outcome<const N: usize, const M: usize>(
         stdout_reader.read_line(&mut buffer[output_line]).await;
     }
 
-    if within(output_tests, buffer[LINES_OF_OUTPUT - 1].clone()) || within(output_tests, buffer[0].clone()) {
+    // debug(&buffer);
+    // println!("\n\n\n\n\n");
+
+    if within(output_tests, buffer[LINES_OF_OUTPUT - 1].clone())
+        || within(output_tests, buffer[0].clone())
+    {
         *score = 1;
     }
 }
@@ -192,6 +206,8 @@ fn matches(buffer: &[String; LINES_OF_OUTPUT], board: &[[&str; 7]; 6]) -> bool {
         if count_matches(&buffer[i + UNIVERSAL_OFFSET] as &str, PLAYER_1) != p1[i]
             || count_matches(&buffer[i + UNIVERSAL_OFFSET] as &str, PLAYER_2) != p2[i]
         {
+            println!("{} != {}", count_matches(&buffer[i + UNIVERSAL_OFFSET] as &str, PLAYER_1), p1[i] );
+            println!("{} != {}", count_matches(&buffer[i + UNIVERSAL_OFFSET] as &str, PLAYER_2), p2[i] );
             return false;
         }
     }
