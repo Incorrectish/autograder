@@ -2,8 +2,6 @@ use async_process::{ChildStdin, ChildStdout, Command, Stdio};
 use futures_lite::{future::block_on, io::BufReader, prelude::*};
 use std::process::exit;
 
-mod template;
-
 // Lines of output to be read from the child process, assume 6 for board, one for prompt
 const LINES_OF_OUTPUT: usize = 7;
 
