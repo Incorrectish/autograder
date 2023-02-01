@@ -1,3 +1,4 @@
-This is a simple proof of concept autograder<br>
-It currently only works for connect 4 but can easily be expanded to work for
-checkers or any other game
+This program runs programs asynchronously, testing them on the given inputs. 
+
+To use it, edit the main files under src/main.rs to provide your test cases, and copy the program into the directory. It will run and grade the program
+and output an accurate score.  
